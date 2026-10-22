@@ -1,0 +1,17 @@
+{
+  "name": "mr-bean-website-comedy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A 10-second vertical 3D animated comedy commercial.",
+  "scripts": {
+    "render": "node render_mr_bean.mjs",
+    "serve": "python3 server.py"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@sparticuz/chromium": "^141.0.0",
+    "puppeteer-core": "^24.26.1",
+    "three": "^0.180.0"
+  }
+}

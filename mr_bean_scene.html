@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Even Mr. Bean Needs a Website — 3D Comedy Short</title>
+  <style>
+    @font-face {
+      font-family: "Inter";
+      src: url("/node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #14100e; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <script type="importmap">
+    {"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
+  </script>
+  <script type="module" src="/mr_bean_scene.js"></script>
+</body>
+</html>

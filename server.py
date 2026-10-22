@@ -53,5 +53,5 @@ class RangeHTTPRequestHandler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     server = HTTPServer(("0.0.0.0", PORT), RangeHTTPRequestHandler)
-    print(f"Serving Brandrums video portal on http://0.0.0.0:{PORT}")
+    print(f"Serving the Mr. Bean comedy short on http://0.0.0.0:{PORT}")
     server.serve_forever()
