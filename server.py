@@ -12,6 +12,10 @@ class RangeHTTPRequestHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Accept-Ranges", "bytes")
+        if "download=1" in self.path:
+            filename = os.path.basename(self.path.split("?", 1)[0]) or "video.mp4"
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("X-Content-Type-Options", "nosniff")
         super().end_headers()
 
     def send_head(self):
