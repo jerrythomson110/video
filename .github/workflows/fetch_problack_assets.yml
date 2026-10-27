@@ -1,0 +1,71 @@
+name: Fetch official ProBlack source assets
+
+on:
+  push:
+    branches:
+      - arena/c52b2809-video
+    paths:
+      - .github/workflows/fetch_problack_assets.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-problack-assets
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v4
+        with:
+          ref: arena/c52b2809-video
+          persist-credentials: true
+
+      - name: Download official assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/problack
+          fetch() {
+            local url="$1"
+            local out="$2"
+            curl -L --fail --silent --show-error --retry 5 --retry-delay 2 \
+              -A 'Mozilla/5.0 (compatible; ProBlackReelAssetFetch/1.0)' \
+              "$url" -o "$out"
+            file "$out"
+          }
+
+          fetch 'https://problack.co/Logo.png' 'assets/problack/problack_logo.png'
+          fetch 'https://problack.co/og-image.png' 'assets/problack/problack_og_image.png'
+          fetch 'https://problack.co/images/home/hero-woman.png' 'assets/problack/hero_customer.png'
+          fetch 'https://problack.co/images/home/tile-vendor.png' 'assets/problack/vendor_tablet.png'
+          fetch 'https://problack.co/images/home/tile-beauty-set.png' 'assets/problack/beauty_set.png'
+          fetch 'https://problack.co/images/home/app-phones.png' 'assets/problack/app_phones.png'
+          fetch 'https://problack.co/img/product/may-birthstone-18k-white-gold-plated-women-jewelry/0.webp' 'assets/problack/jewelry.webp'
+          fetch 'https://problack.co/img/product/for-whom-the-belle-tolls-paperback/0.webp' 'assets/problack/book.webp'
+
+          # Render the live mobile homepage at a modern phone viewport.
+          curl -L --fail --silent --show-error --retry 5 --retry-delay 2 \
+            'https://api.microlink.io/?url=https%3A%2F%2Fproblack.co%2F&screenshot=true&screenshot.type=png&meta=false&waitForTimeout=3500&viewport.width=390&viewport.height=844&viewport.deviceScaleFactor=2&viewport.isMobile=true&viewport.hasTouch=true' \
+            -o /tmp/problack_mobile.json
+          screenshot_url="$(jq -r '.data.screenshot.url' /tmp/problack_mobile.json)"
+          test -n "$screenshot_url" && test "$screenshot_url" != 'null'
+          fetch "$screenshot_url" 'assets/problack/website_mobile.png'
+
+      - name: Commit source assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Arena Agent'
+          git config user.email 'agent@arena.ai'
+          git add assets/problack
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add official ProBlack source assets for 10s reel'
+            git push origin 'HEAD:refs/heads/arena/c52b2809-video'
+          else
+            echo 'No asset changes to commit.'
+          fi
