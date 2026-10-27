@@ -27,34 +27,94 @@ jobs:
 
       - name: Download official assets
         shell: bash
+        env:
+          UA: 'Mozilla/5.0 (compatible; ProBlackReelAssetFetch/1.0)'
         run: |
-          set -euo pipefail
+          set -uo pipefail
           mkdir -p assets/problack
+          : > assets/problack/fetch_report.txt
+
           fetch() {
             local url="$1"
             local out="$2"
-            curl -L --fail --silent --show-error --retry 5 --retry-delay 2 \
-              -A 'Mozilla/5.0 (compatible; ProBlackReelAssetFetch/1.0)' \
-              "$url" -o "$out"
-            file "$out"
+            local label="$3"
+            echo "Fetching $label"
+            rm -f "$out"
+            if curl -L --fail --silent --show-error --retry 5 --retry-all-errors \
+              --connect-timeout 20 --max-time 120 -A "$UA" "$url" -o "$out" \
+              && [ -s "$out" ]; then
+              echo "OK $label $(wc -c < "$out") bytes" | tee -a assets/problack/fetch_report.txt
+              return 0
+            fi
+            echo "FAILED $label" | tee -a assets/problack/fetch_report.txt
+            rm -f "$out"
+            return 1
           }
 
-          fetch 'https://problack.co/Logo.png' 'assets/problack/problack_logo.png'
-          fetch 'https://problack.co/og-image.png' 'assets/problack/problack_og_image.png'
-          fetch 'https://problack.co/images/home/hero-woman.png' 'assets/problack/hero_customer.png'
-          fetch 'https://problack.co/images/home/tile-vendor.png' 'assets/problack/vendor_tablet.png'
-          fetch 'https://problack.co/images/home/tile-beauty-set.png' 'assets/problack/beauty_set.png'
-          fetch 'https://problack.co/images/home/app-phones.png' 'assets/problack/app_phones.png'
-          fetch 'https://problack.co/img/product/may-birthstone-18k-white-gold-plated-women-jewelry/0.webp' 'assets/problack/jewelry.webp'
-          fetch 'https://problack.co/img/product/for-whom-the-belle-tolls-paperback/0.webp' 'assets/problack/book.webp'
+          fetch_with_fallback() {
+            local direct="$1"
+            local proxy="$2"
+            local out="$3"
+            local label="$4"
+            fetch "$direct" "$out" "$label (direct)" || fetch "$proxy" "$out" "$label (proxy)" || true
+          }
 
-          # Render the live mobile homepage at a modern phone viewport.
-          curl -L --fail --silent --show-error --retry 5 --retry-delay 2 \
-            'https://api.microlink.io/?url=https%3A%2F%2Fproblack.co%2F&screenshot=true&screenshot.type=png&meta=false&waitForTimeout=3500&viewport.width=390&viewport.height=844&viewport.deviceScaleFactor=2&viewport.isMobile=true&viewport.hasTouch=true' \
-            -o /tmp/problack_mobile.json
-          screenshot_url="$(jq -r '.data.screenshot.url' /tmp/problack_mobile.json)"
-          test -n "$screenshot_url" && test "$screenshot_url" != 'null'
-          fetch "$screenshot_url" 'assets/problack/website_mobile.png'
+          fetch_with_fallback \
+            'https://problack.co/Logo.png' \
+            'https://images.weserv.nl/?url=problack.co/Logo.png&output=png' \
+            'assets/problack/problack_logo.png' \
+            'Official logo'
+
+          fetch_with_fallback \
+            'https://problack.co/og-image.png' \
+            'https://images.weserv.nl/?url=problack.co/og-image.png&output=png' \
+            'assets/problack/problack_og_image.png' \
+            'Official OG image'
+
+          fetch_with_fallback \
+            'https://problack.co/images/home/hero-woman.png' \
+            'https://images.weserv.nl/?url=problack.co/images/home/hero-woman.png&output=png' \
+            'assets/problack/hero_customer.png' \
+            'Official customer hero'
+
+          fetch_with_fallback \
+            'https://problack.co/images/home/tile-vendor.png' \
+            'https://images.weserv.nl/?url=problack.co/images/home/tile-vendor.png&output=png' \
+            'assets/problack/vendor_tablet.png' \
+            'Official vendor image'
+
+          fetch_with_fallback \
+            'https://problack.co/images/home/tile-beauty-set.png' \
+            'https://images.weserv.nl/?url=problack.co/images/home/tile-beauty-set.png&output=png' \
+            'assets/problack/beauty_set.png' \
+            'Official beauty tile'
+
+          fetch_with_fallback \
+            'https://problack.co/images/home/app-phones.png' \
+            'https://images.weserv.nl/?url=problack.co/images/home/app-phones.png&output=png' \
+            'assets/problack/app_phones.png' \
+            'Official app phones'
+
+          fetch_with_fallback \
+            'https://problack.co/img/product/may-birthstone-18k-white-gold-plated-women-jewelry/0.webp' \
+            'https://images.weserv.nl/?url=problack.co/img/product/may-birthstone-18k-white-gold-plated-women-jewelry/0.webp&output=webp' \
+            'assets/problack/jewelry.webp' \
+            'Official jewelry product'
+
+          fetch_with_fallback \
+            'https://problack.co/img/product/for-whom-the-belle-tolls-paperback/0.webp' \
+            'https://images.weserv.nl/?url=problack.co/img/product/for-whom-the-belle-tolls-paperback/0.webp&output=webp' \
+            'assets/problack/book.webp' \
+            'Official book product'
+
+          # Direct image-delivery mode for the live mobile homepage capture.
+          MICROLINK='https://api.microlink.io/?url=https%3A%2F%2Fproblack.co%2F&screenshot=true&screenshot.type=png&meta=false&waitForTimeout=3500&viewport.width=390&viewport.height=844&viewport.deviceScaleFactor=2&viewport.isMobile=true&viewport.hasTouch=true&embed=screenshot.url'
+          fetch "$MICROLINK" 'assets/problack/website_mobile.png' 'Official mobile homepage screenshot' || true
+
+          echo '--- report ---'
+          cat assets/problack/fetch_report.txt
+          echo '--- files ---'
+          find assets/problack -maxdepth 1 -type f -printf '%s %p\n' | sort -k2
 
       - name: Commit source assets
         shell: bash
