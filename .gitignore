@@ -1,0 +1,15 @@
+# Python runtime / installed wheels
+.venv/
+.pydeps/
+__pycache__/
+*.py[cod]
+
+# Scratch / generated QC files
+tmp/
+image-search/
+*.tmp.wav
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
